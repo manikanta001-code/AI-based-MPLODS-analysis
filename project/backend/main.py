@@ -15,7 +15,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
-from auth import authenticate_user, create_access_token, get_current_user, CurrentUser, TokenResponse
+from project.backend.auth import authenticate_user, create_access_token, get_current_user, CurrentUser, TokenResponse
 from database import init_db
 from routers import works, alerts, analytics, roles, meta, upload
 
