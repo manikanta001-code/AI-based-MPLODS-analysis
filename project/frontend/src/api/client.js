@@ -1,4 +1,4 @@
-const BASE_URL = "https://ai-based-mplods-analysis.onrender.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://ai-based-mplods-analysis.onrender.com";
 const TOKEN_KEY = "mplads_token";
 
 export function getToken() {
@@ -38,7 +38,7 @@ async function request(path, { method = "GET", body, isForm = false, params } = 
       headers,
       body: isForm ? body : body ? JSON.stringify(body) : undefined,
     });
-  } catch {
+  } catch (err) {
     throw new ApiError("Cannot reach the server. Is the backend running on Render?", 0);
   }
 
@@ -89,6 +89,6 @@ export async function login(username, password) {
     throw new ApiError(`Server returned an unexpected response (HTTP ${res.status}). Is the backend running correctly?`, res.status);
   }
 
-  if (!res.ok) throw new ApiError(data.detail || "Login failed", status);
+  if (!res.ok) throw new ApiError(data.detail || "Login failed", res.status);
   return data;
 }
