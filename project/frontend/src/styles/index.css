@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  h1, h2, h3 {
+    font-family: "Newsreader", serif;
+  }
+  ::selection {
+    background-color: #DCE9EB;
+  }
+  *:focus-visible {
+    outline: 2px solid #2B6777;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
