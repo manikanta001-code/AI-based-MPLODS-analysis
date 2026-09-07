@@ -1,3 +1,4 @@
+const BASE_URL = "https://ai-based-mplods-analysis.onrender.com";
 const TOKEN_KEY = "mplads_token";
 
 export function getToken() {
@@ -22,7 +23,7 @@ async function request(path, { method = "GET", body, isForm = false, params } = 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (body && !isForm) headers["Content-Type"] = "application/json";
 
-  let url = path;
+  let url = `${BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
   if (params) {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
@@ -38,7 +39,7 @@ async function request(path, { method = "GET", body, isForm = false, params } = 
       body: isForm ? body : body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError("Cannot reach the server. Is the backend running at http://localhost:8000?", 0);
+    throw new ApiError("Cannot reach the server. Is the backend running on Render?", 0);
   }
 
   if (res.status === 401) {
@@ -72,13 +73,13 @@ export async function login(username, password) {
   const form = new URLSearchParams({ username, password });
   let res;
   try {
-    res = await fetch("/auth/login", {
+    res = await fetch(`${BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: form,
     });
   } catch {
-    throw new ApiError("Cannot reach the server. Is the backend running at http://localhost:8000?", 0);
+    throw new ApiError("Cannot reach the server. Is the backend running on Render?", 0);
   }
 
   let data;
@@ -88,6 +89,6 @@ export async function login(username, password) {
     throw new ApiError(`Server returned an unexpected response (HTTP ${res.status}). Is the backend running correctly?`, res.status);
   }
 
-  if (!res.ok) throw new ApiError(data.detail || "Login failed", res.status);
+  if (!res.ok) throw new ApiError(data.detail || "Login failed", status);
   return data;
 }
