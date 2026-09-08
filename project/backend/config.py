@@ -20,9 +20,12 @@ ALLOCATION_CSV = os.path.join(DATA_DIR, "Allocated_Limit_for_Honble_MPs__4_.csv"
 
 # ──────────────────────────────────────────────────────────────────────
 # 2. DATABASE
+#    On Render, DATABASE_URL is set as an environment variable pointing
+#    to the Postgres database. Locally (no env var set), it falls back
+#    to a SQLite file so nothing breaks on your machine.
 # ──────────────────────────────────────────────────────────────────────
 DB_PATH = os.path.join(BASE_DIR, "mplads.db")
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DB_PATH}")
 
 # ──────────────────────────────────────────────────────────────────────
 # 3. MODEL ARTIFACT PATHS (used from Phase 2 onward)
@@ -137,4 +140,3 @@ DEMO_USERS = {
         "display_name": "Jaunpur District Authority",
     },
 }
-

@@ -1,9 +1,7 @@
 import os
-
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
-
 from auth import (
     authenticate_user,
     create_access_token,
@@ -60,7 +58,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-
     token = create_access_token(
         username=form_data.username, role=user["role"], scope=user["scope"]
     )
@@ -77,10 +74,13 @@ def read_current_user(user: CurrentUser = Depends(get_current_user)):
     return user
 
 
-# Router inclusions with /api prefix added
-app.include_router(works.router, prefix="/api")
-app.include_router(alerts.router, prefix="/api")
-app.include_router(analytics.router, prefix="/api")
-app.include_router(roles.router, prefix="/api")
-app.include_router(meta.router, prefix="/api")
-app.include_router(upload.router, prefix="/api")
+# Router inclusions — each router already defines its own /api/... prefix
+# internally (see routers/*.py), so no extra prefix is added here.
+# Adding "/api" again here would double it up (e.g. /api/api/roles/...)
+# and cause every endpoint to 404.
+app.include_router(works.router)
+app.include_router(alerts.router)
+app.include_router(analytics.router)
+app.include_router(roles.router)
+app.include_router(meta.router)
+app.include_router(upload.router)
