@@ -73,7 +73,17 @@ class MPAllocation(Base):
 
 
 class WorkRiskScore(Base):
-    """Processed analytics & feature table required by routers."""
+    """Processed analytics & feature table required by routers.
+
+    NOTE: this simplified ORM definition is only used to make sure the
+    table exists on first boot. The real, full schema (with all ML
+    feature columns like ida, expected_cost, risk_reasons, etc.) comes
+    from work_risk_scores.csv and is loaded with if_exists="replace" in
+    init_db(), which lets pandas create the table with the exact columns
+    present in that CSV. All API queries use raw SQL against the actual
+    table, not this class, so this simplified version never causes a
+    mismatch in practice.
+    """
     __tablename__ = "work_risk_scores"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -110,11 +120,14 @@ def init_db():
             import feature_engine
             feature_engine.run_feature_pipeline()
         except ImportError:
-            # Fallback if CSV dataset exists directly in the workspace
+            # Fallback if CSV dataset exists directly in the workspace.
+            # if_exists="replace" recreates the table using the CSV's own
+            # real columns/types, so it always matches the actual data
+            # regardless of what the simplified ORM class above defines.
             csv_path = os.path.join(os.path.dirname(__file__), "work_risk_scores.csv")
             if os.path.exists(csv_path):
                 df = pd.read_csv(csv_path)
-                df.to_sql("work_risk_scores", con=engine, if_exists="append", index=False)
+                df.to_sql("work_risk_scores", con=engine, if_exists="replace", index=False)
                 print("Successfully populated work_risk_scores from CSV.")
 
 
