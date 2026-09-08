@@ -77,10 +77,10 @@ def read_current_user(user: CurrentUser = Depends(get_current_user)):
     return user
 
 
-# Router inclusions
-app.include_router(works.router)
-app.include_router(alerts.router)
-app.include_router(analytics.router)
-app.include_router(roles.router)
-app.include_router(meta.router)
-app.include_router(upload.router)
+# Router inclusions with /api prefix added
+app.include_router(works.router, prefix="/api")
+app.include_router(alerts.router, prefix="/api")
+app.include_router(analytics.router, prefix="/api")
+app.include_router(roles.router, prefix="/api")
+app.include_router(meta.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
