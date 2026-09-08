@@ -15,10 +15,18 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS: allow the React dev server and Vercel production frontend
+# Explicitly list allowed origins instead of using wildcards with credentials
+origins = [
+    "https://ai-based-mplods-analysis.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
