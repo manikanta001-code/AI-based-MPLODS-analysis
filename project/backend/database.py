@@ -2,22 +2,12 @@
 database.py
 ───────────
 SQLAlchemy engine/session setup + ORM table definitions.
-
-We keep THREE staging tables that mirror the three raw source files
-(works_sanctioned, works_completed, mp_allocations) rather than force-joining
-them into one table during ETL. Why:
-  - "Work ID" only has ~59% overlap between Sanctioned and Completed
-    (Sanctioned = current-term snapshot, Completed spans a longer history),
-    so a hard join at ETL time would silently drop real records.
-  - Phase 2 (feature_engine.py) needs BOTH the sanctioned-side fields
-    (recommended/sanction dates, sanction amount, status) and the
-    completed-side fields (completion date, amount disbursed) to engineer
-    delay/cost-overrun features — it performs the join itself, on demand,
-    with full control over how unmatched rows are handled.
-  - This is lossless: nothing from the raw files is discarded at this stage.
+Includes raw staging tables and processed feature tables (work_risk_scores).
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, Date, Boolean
+import os
+import pandas as pd
+from sqlalchemy import create_engine, Column, Integer, String, Float, Date, Boolean, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from config import DATABASE_URL
@@ -32,13 +22,13 @@ class WorkSanctioned(Base):
     __tablename__ = "works_sanctioned"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    work_id = Column(String, index=True, nullable=False)       # extracted from "Work" column, join key
+    work_id = Column(String, index=True, nullable=False)
     sl_no = Column(Integer)
-    work_raw = Column(String)                                   # original "Work" cell, kept for traceability
+    work_raw = Column(String)
     work_category = Column(String, index=True)
     state = Column(String, index=True)
     ida = Column(String)
-    ida_missing = Column(Boolean, default=False)                # red-flag: IDA was blank in source data
+    ida_missing = Column(Boolean, default=False)
     mp_name = Column(String, index=True)
     constituency = Column(String, index=True)
     work_description = Column(String)
@@ -64,12 +54,12 @@ class WorkCompleted(Base):
     constituency = Column(String, index=True)
     work_description = Column(String)
     completion_date = Column(Date)
-    amount_disbursed = Column(Float, nullable=True)             # nullable: missing values are kept, not dropped
+    amount_disbursed = Column(Float, nullable=True)
     amount_missing = Column(Boolean, default=False)
 
 
 class MPAllocation(Base):
-    """One row per MP's total allocated MPLADS limit (Allocated_Limit_for_Honble_MPs.csv)."""
+    """One row per MP's total allocated MPLADS limit."""
     __tablename__ = "mp_allocations"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -80,9 +70,50 @@ class MPAllocation(Base):
     allocated_amount = Column(Float)
 
 
+class WorkRiskScore(Base):
+    """Processed analytics & feature table required by routers."""
+    __tablename__ = "work_risk_scores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    work_id = Column(String, index=True)
+    state = Column(String, index=True)
+    district = Column(String, index=True)
+    mp_name = Column(String, index=True)
+    constituency = Column(String, index=True)
+    work_category = Column(String, index=True)
+    sanction_date = Column(String)
+    completion_date = Column(String)
+    sanction_amount = Column(Float)
+    amount_disbursed = Column(Float)
+    is_completed = Column(Integer, default=0)
+    risk_band = Column(String, index=True)
+    delay_risk_pct = Column(Float)
+    risk_score = Column(Float)
+
+
 def init_db():
-    """Create all tables (drops nothing; safe to call repeatedly)."""
+    """Create all tables and build features if they don't exist yet."""
     Base.metadata.create_all(bind=engine)
+
+    # Check if work_risk_scores contains data
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT COUNT(*) FROM work_risk_scores")).fetchone()
+        row_count = result[0] if result else 0
+
+    # Auto-run feature generator / ETL if table is empty
+    if row_count == 0:
+        print("Table 'work_risk_scores' is empty. Populating initial dataset...")
+        try:
+            # If you have a script like feature_engine.py or a CSV pre-baked:
+            import feature_engine
+            feature_engine.run_feature_pipeline()
+        except ImportError:
+            # Fallback if CSV dataset exists directly in the workspace
+            csv_path = os.path.join(os.path.dirname(__file__), "work_risk_scores.csv")
+            if os.path.exists(csv_path):
+                df = pd.read_csv(csv_path)
+                df.to_sql("work_risk_scores", con=engine, if_exists="append", index=False)
+                print("Successfully populated work_risk_scores from CSV.")
 
 
 def get_db():
