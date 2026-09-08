@@ -4,7 +4,13 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
-from auth import authenticate_user, create_access_token, get_current_user, CurrentUser, TokenResponse
+from auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    CurrentUser,
+    TokenResponse,
+)
 from database import init_db
 from routers import works, alerts, analytics, roles, meta, upload
 
@@ -15,9 +21,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Explicitly list allowed origins instead of using wildcards with credentials
+# Allowed origins including both standard and trailing-slash variants
 origins = [
     "https://ai-based-mplods-analysis.vercel.app",
+    "https://ai-based-mplods-analysis.vercel.app/",
     "http://localhost:3000",
     "http://localhost:5173",
     "http://127.0.0.1:3000",
@@ -28,8 +35,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
@@ -53,9 +61,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
 
-    token = create_access_token(username=form_data.username, role=user["role"], scope=user["scope"])
+    token = create_access_token(
+        username=form_data.username, role=user["role"], scope=user["scope"]
+    )
     return TokenResponse(
-        access_token=token, role=user["role"], scope=user["scope"], display_name=user["display_name"]
+        access_token=token,
+        role=user["role"],
+        scope=user["scope"],
+        display_name=user["display_name"],
     )
 
 
@@ -64,6 +77,7 @@ def read_current_user(user: CurrentUser = Depends(get_current_user)):
     return user
 
 
+# Router inclusions
 app.include_router(works.router)
 app.include_router(alerts.router)
 app.include_router(analytics.router)
